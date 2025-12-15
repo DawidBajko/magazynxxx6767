@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd # <-- DODANO: Import biblioteki Pandas
 
 # --- Inicjalizacja Magazynu ---
 
@@ -13,8 +14,8 @@ if 'inventory' not in st.session_state:
 def add_item(name, quantity):
     """Dodaje nowy towar do magazynu."""
     if name and quantity > 0:
-        st.session_state.inventory.append({"name": name, "quantity": quantity})
-        st.success(f"Dodano: {name} w ilości {quantity}.")
+        st.session_state.inventory.append({"name": name, "quantity": int(quantity)})
+        st.success(f"Dodano: {name} w ilości {int(quantity)}.")
     else:
         st.error("Wprowadź prawidłową nazwę i ilość (musi być większa niż 0).")
 
@@ -39,13 +40,11 @@ st.markdown("---")
 with st.container():
     st.header("➕ Dodaj Nowy Towar")
     
-    # Formularz używa kontekstu 'with st.form', aby wszystkie pola
-    # były resetowane po naciśnięciu przycisku 'submit'.
     with st.form(key='add_form', clear_on_submit=True):
         new_name = st.text_input("Nazwa Towaru:")
+        # Zapewnienie, że ilość jest liczbą całkowitą
         new_quantity = st.number_input("Ilość:", min_value=1, step=1, value=1)
         
-        # Przycisk dodawania
         submit_button = st.form_submit_button(label='Dodaj do Magazynu')
 
         if submit_button:
@@ -57,19 +56,18 @@ st.markdown("---")
 with st.container():
     st.header("➖ Usuń Towar")
 
-    # Wskazówka dla użytkownika
     st.info("Podaj numer towaru (Lp.) z poniższej listy, aby go usunąć.")
 
     with st.form(key='remove_form', clear_on_submit=True):
-        # Użytkownik wprowadza numer *pozycji* widoczny na liście (indeks + 1)
         remove_index_display = st.number_input(
             "Numer (Lp.) Towaru do Usunięcia:", 
             min_value=1, 
             step=1, 
+            # Ustawienie maksymalnej wartości, jeśli magazyn nie jest pusty
+            max_value=len(st.session_state.inventory) if st.session_state.inventory else 1, 
             value=1
         )
         
-        # Przycisk usuwania
         remove_button = st.form_submit_button(label='Usuń z Magazynu')
         
         if remove_button:
@@ -83,7 +81,7 @@ st.markdown("---")
 st.header("📑 Aktualny Stan Magazynu")
 
 if st.session_state.inventory:
-    # Tworzymy listę słowników do wyświetlenia jako tabela
+    # 1. Tworzymy listę słowników do wyświetlenia
     display_data = []
     for i, item in enumerate(st.session_state.inventory):
         display_data.append({
@@ -92,7 +90,15 @@ if st.session_state.inventory:
             "Ilość": item['quantity']
         })
         
-    # Wyświetlenie danych w formie tabeli Streamlit
-    st.table(display_data)
+    # 2. Tworzymy Pandas DataFrame
+    df = pd.DataFrame(display_data)
+    
+    # 3. Wyświetlamy za pomocą st.dataframe z opcją hide_index=True
+    st.dataframe(
+        df, 
+        hide_index=True, # <-- KLUCZOWA ZMIANA: Ukrywa domyślną kolumnę indeksu
+        use_container_width=True
+    )
+    
 else:
     st.info("Magazyn jest pusty. Dodaj pierwszy towar!")
